@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Megabarsch - Point & Click Adventure</title>
+    <style>
+        body { background: #111; color: #fff; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        #game-container { border: 4px solid #333; background: #000; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+        canvas { display: block; cursor: pointer; background: #222; }
+        #ui-bar { width: 800px; background: #222; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #444; }
+        .verb-btn { background: #333; color: #ff0; border: 1px solid #666; padding: 8px 12px; cursor: pointer; font-family: monospace; font-weight: bold; }
+        .verb-btn:hover { background: #444; }
+        #status-text { color: #0ff; font-weight: bold; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="450"></canvas>
+        <div id="ui-bar">
+            <div>
+                Aktion: <span id="current-verb">Gehe zu</span> | 
+                <button class="verb-btn" onclick="setVerb('Gehe')">Gehe zu</button>
+                <button class="verb-btn" onclick="setVerb('Nimm')">Nimm</button>
+                <button class="verb-btn" onclick="setVerb('Rede mit')">Rede mit</button>
+            </div>
+            <div id="status-text">Klicke im Laden, um zu interagieren.</div>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let currentVerb = 'Gehe';
+    let playerX = 650;
+    let playerY = 380;
+    let hasQuest = false;
+    let hasRod = false;
+    let inventory = [];
+
+    function setVerb(verb) {
+        currentVerb = verb;
+        document.getElementById('current-verb').innerText = verb;
+    }
+
+    canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (x > 500 && x < 680 && y > 150 && y < 350) {
+            if (currentVerb === 'Rede mit') {
+                if (!hasQuest) {
+                    setStatus("Besitzer: 'Fang mir den Megabarsch im See für die Werbung!'");
+                    hasQuest = true;
+                } else if (!hasRod) {
+                    setStatus("Besitzer: 'Nimm dir drüben eine Rute aus dem Ständer!'");
+                } else {
+                    setStatus("Besitzer: 'Worauf wartest du? Ab an den See!'");
+                }
+            } else {
+                setStatus("Du gehst zum Tresen.");
+            }
+        } else if (x > 50 && x < 250 && y > 100 && y < 350) {
+            if (currentVerb === 'Nimm') {
+                if (hasQuest && !hasRod) {
+                    hasRod = true;
+                    inventory.push('Baitcast-Rute');
+                    setStatus("Du nimmst eine robuste Rute aus dem Regal.");
+                } else if (hasRod) {
+                    setStatus("Du hast bereits eine Rute eingepackt.");
+                } else {
+                    setStatus("Das solltest du jetzt noch nicht mitnehmen.");
+                }
+            } else {
+                setStatus("Du näherst dich dem Regal.");
+            }
+        } else {
+            playerX = Math.max(100, Math.min(750, x));
+            setStatus("Du bewegst dich im Laden.");
+        }
+    });
+
+    function setStatus(text) {
+        document.getElementById('status-text').innerText = text;
+    }
+
+    function drawShop() {
+        ctx.fillStyle = '#4a2e18';
+        ctx.fillRect(0, 0, canvas.width, 350);
+
+        ctx.fillStyle = '#2b1b0c';
+        ctx.fillRect(0, 350, canvas.width, 100);
+
+        ctx.fillStyle = '#331a08';
+        ctx.fillRect(50, 80, 200, 270);
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = '14px monospace';
+        ctx.fillText('RUTEN & KÖDER', 70, 110);
+
+        ctx.fillStyle = '#5c3a21';
+        ctx.fillRect(480, 200, 220, 150);
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillText('BASS PRO SHOP', 510, 240);
+
+        ctx.fillStyle = '#d9534f';
+        ctx.fillRect(560, 130, 60, 90);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(575, 145, 10, 10);
+
+        ctx.fillStyle = '#337ab7';
+        ctx.fillRect(playerX - 12, playerY - 50, 24, 50);
+        ctx.fillStyle = '#ffdbac';
+        ctx.fillRect(playerX - 8, playerY - 70, 16, 20);
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '14px monospace';
+        ctx.fillText('Inventar: ' + (inventory.length > 0 ? inventory.join(', ') : 'Leer'), 20, 30);
+    }
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawShop();
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+</script>
+
+</body>
+</html>
