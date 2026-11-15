@@ -2,15 +2,19 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Megabarsch - Point & Click Adventure</title>
     <style>
-        body { background: #111; color: #fff; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        #game-container { border: 4px solid #333; background: #000; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
-        canvas { display: block; cursor: pointer; background: #222; }
-        #ui-bar { width: 800px; background: #222; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #444; }
+        body { background: #111; color: #fff; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 10px; box-sizing: border-box; }
+        #game-container { width: 100%; max-width: 800px; box-sizing: border-box; border: 4px solid #333; background: #000; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+        canvas { display: block; width: 100%; height: auto; cursor: pointer; }
+        #ui-bar { background: #222; padding: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 2px solid #444; }
+        .verbs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
         .verb-btn { background: #333; color: #ff0; border: 1px solid #666; padding: 8px 12px; cursor: pointer; font-family: monospace; font-weight: bold; }
         .verb-btn:hover { background: #444; }
-        #status-text { color: #0ff; font-weight: bold; font-size: 14px; }
+        .verb-btn.active { border-color: #ff0; background: #555; }
+        #status-text { color: #0ff; font-weight: bold; font-size: 14px; min-height: 2.4em; }
+        #inventory { color: #fff; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -18,13 +22,14 @@
     <div id="game-container">
         <canvas id="gameCanvas" width="800" height="450"></canvas>
         <div id="ui-bar">
-            <div>
-                Aktion: <span id="current-verb">Gehe zu</span> | 
-                <button class="verb-btn" onclick="setVerb('Gehe')">Gehe zu</button>
-                <button class="verb-btn" onclick="setVerb('Nimm')">Nimm</button>
-                <button class="verb-btn" onclick="setVerb('Rede mit')">Rede mit</button>
+            <div class="verbs">
+                <span>Aktion: <span id="current-verb">Gehe zu</span> |</span>
+                <button class="verb-btn active" data-verb="Gehe" onclick="setVerb('Gehe')">Gehe zu</button>
+                <button class="verb-btn" data-verb="Nimm" onclick="setVerb('Nimm')">Nimm</button>
+                <button class="verb-btn" data-verb="Rede mit" onclick="setVerb('Rede mit')">Rede mit</button>
             </div>
             <div id="status-text">Klicke im Laden, um zu interagieren.</div>
+            <div id="inventory">Inventar: Leer</div>
         </div>
     </div>
 
@@ -32,100 +37,193 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
+    // ---------- Einstellungen ----------
+    const FLOOR_Y = 400;            // Füße der Figur auf dem Boden (y-Position)
+    const PLAYER_W = 150, PLAYER_H = 130;
+    const WALK_SPEED = 2.5;         // Pixel pro Bild beim Laufen
+    const OWNER = { x: 560, feetY: 300, w: 150, h: 160 };
+    const COUNTER_CLIP = { x: 400, y: 255, w: 300, h: 145 }; // Bereich der Theke, der den Besitzer verdeckt
+    const COUNTER_STAND_X = 470;    // Wo die Figur beim Besitzer stehen bleibt
+    const SHELF_STAND_X = 230;      // Wo die Figur beim Regal stehen bleibt
+
+    // Klickbereiche (in Canvas-Pixeln, 800 x 450)
+    const OWNER_ZONE = { x1: 430, x2: 700, y1: 120, y2: 370 };
+    const SHELF_ZONE = { x1: 90, x2: 380, y1: 60, y2: 380 };
+
+    // ---------- Spielzustand ----------
     let currentVerb = 'Gehe';
-    let playerX = 650;
-    let playerY = 380;
+    let playerX = 400;
+    let targetX = null;
+    let pendingAction = null;       // Was passieren soll, wenn die Figur angekommen ist
+    let facing = 1;                 // 1 = rechts, -1 = links
+    let frame = 0;                  // 0..5 = Laufbild, 0 ist auch Standbild
+    let frameTick = 0;
     let hasQuest = false;
     let hasRod = false;
     let inventory = [];
 
+    // ---------- Bilder laden ----------
+    const images = {};
+    const imageNames = ['shop', 'owner', 'player_1', 'player_2', 'player_3', 'player_4', 'player_5', 'player_6'];
+    let loadedCount = 0;
+    imageNames.forEach(name => {
+        const img = new Image();
+        img.onload = img.onerror = () => {
+            loadedCount++;
+            if (loadedCount === imageNames.length) startGame();
+        };
+        img.src = 'assets/' + name + (name === 'shop' ? '.jpg' : '.png');
+        images[name] = img;
+    });
+
+    function startGame() {
+        updateInventory();
+        gameLoop();
+    }
+
+    // ---------- Bedienung ----------
     function setVerb(verb) {
         currentVerb = verb;
         document.getElementById('current-verb').innerText = verb;
+        document.querySelectorAll('.verb-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.verb === verb);
+        });
     }
-
-    canvas.addEventListener('click', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        if (x > 500 && x < 680 && y > 150 && y < 350) {
-            if (currentVerb === 'Rede mit') {
-                if (!hasQuest) {
-                    setStatus("Besitzer: 'Fang mir den Megabarsch im See für die Werbung!'");
-                    hasQuest = true;
-                } else if (!hasRod) {
-                    setStatus("Besitzer: 'Nimm dir drüben eine Rute aus dem Ständer!'");
-                } else {
-                    setStatus("Besitzer: 'Worauf wartest du? Ab an den See!'");
-                }
-            } else {
-                setStatus("Du gehst zum Tresen.");
-            }
-        } else if (x > 50 && x < 250 && y > 100 && y < 350) {
-            if (currentVerb === 'Nimm') {
-                if (hasQuest && !hasRod) {
-                    hasRod = true;
-                    inventory.push('Baitcast-Rute');
-                    setStatus("Du nimmst eine robuste Rute aus dem Regal.");
-                } else if (hasRod) {
-                    setStatus("Du hast bereits eine Rute eingepackt.");
-                } else {
-                    setStatus("Das solltest du jetzt noch nicht mitnehmen.");
-                }
-            } else {
-                setStatus("Du näherst dich dem Regal.");
-            }
-        } else {
-            playerX = Math.max(100, Math.min(750, x));
-            setStatus("Du bewegst dich im Laden.");
-        }
-    });
 
     function setStatus(text) {
         document.getElementById('status-text').innerText = text;
     }
 
-    function drawShop() {
-        ctx.fillStyle = '#4a2e18';
-        ctx.fillRect(0, 0, canvas.width, 350);
+    function updateInventory() {
+        document.getElementById('inventory').innerText =
+            'Inventar: ' + (inventory.length > 0 ? inventory.join(', ') : 'Leer');
+    }
 
-        ctx.fillStyle = '#2b1b0c';
-        ctx.fillRect(0, 350, canvas.width, 100);
+    function walkTo(x, action, message) {
+        targetX = Math.max(40, Math.min(760, x));
+        pendingAction = action;
+        if (message) setStatus(message);
+    }
 
-        ctx.fillStyle = '#331a08';
-        ctx.fillRect(50, 80, 200, 270);
-        ctx.fillStyle = '#ffcc00';
-        ctx.font = '14px monospace';
-        ctx.fillText('RUTEN & KÖDER', 70, 110);
+    canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        // Klick-Position umrechnen, falls das Bild am Handy verkleinert ist
+        const x = (e.clientX - rect.left) * canvas.width / rect.width;
+        const y = (e.clientY - rect.top) * canvas.height / rect.height;
 
+        if (x >= OWNER_ZONE.x1 && x <= OWNER_ZONE.x2 && y >= OWNER_ZONE.y1 && y <= OWNER_ZONE.y2) {
+            walkTo(COUNTER_STAND_X, () => ownerAction(currentVerb), 'Du gehst zum Tresen.');
+        } else if (x >= SHELF_ZONE.x1 && x <= SHELF_ZONE.x2 && y >= SHELF_ZONE.y1 && y <= SHELF_ZONE.y2) {
+            walkTo(SHELF_STAND_X, () => shelfAction(currentVerb), 'Du gehst zum Regal.');
+        } else {
+            walkTo(x, null, null);
+        }
+    });
+
+    // ---------- Aktionen, wenn die Figur angekommen ist ----------
+    function ownerAction(verb) {
+        if (verb === 'Rede mit') {
+            if (!hasQuest) {
+                setStatus("Besitzer: 'Fang mir den Megabarsch im See für die Werbung!'");
+                hasQuest = true;
+            } else if (!hasRod) {
+                setStatus("Besitzer: 'Nimm dir drüben eine Rute aus dem Regal!'");
+            } else {
+                setStatus("Besitzer: 'Worauf wartest du? Ab an den See!'");
+            }
+        } else if (verb === 'Nimm') {
+            setStatus("Den Besitzer kannst du nicht einpacken.");
+        } else {
+            setStatus("Du stehst jetzt am Tresen.");
+        }
+    }
+
+    function shelfAction(verb) {
+        if (verb === 'Nimm') {
+            if (hasQuest && !hasRod) {
+                hasRod = true;
+                inventory.push('Baitcast-Rute');
+                updateInventory();
+                setStatus("Du nimmst eine robuste Rute aus dem Regal.");
+            } else if (hasRod) {
+                setStatus("Du hast bereits eine Rute eingepackt.");
+            } else {
+                setStatus("Das solltest du jetzt noch nicht mitnehmen.");
+            }
+        } else if (verb === 'Rede mit') {
+            setStatus("Die Ruten antworten nicht.");
+        } else {
+            setStatus("Du stehst vor dem Regal.");
+        }
+    }
+
+    // ---------- Figur bewegen ----------
+    function update() {
+        if (targetX !== null) {
+            const dx = targetX - playerX;
+            if (Math.abs(dx) <= WALK_SPEED) {
+                playerX = targetX;
+                targetX = null;
+                frame = 0;
+                if (pendingAction) {
+                    const action = pendingAction;
+                    pendingAction = null;
+                    action();
+                }
+            } else {
+                const dir = Math.sign(dx);
+                playerX += dir * WALK_SPEED;
+                facing = dir;
+                frameTick++;
+                if (frameTick % 6 === 0) frame = (frame + 1) % 6;
+            }
+        } else {
+            frame = 0;
+        }
+    }
+
+    // ---------- Zeichnen ----------
+    function drawSprite(img, centerX, feetY, w, h, flip) {
+        ctx.save();
+        ctx.translate(centerX, feetY);
+        if (flip) ctx.scale(-1, 1);
+        ctx.drawImage(img, -w / 2, -h, w, h);
+        ctx.restore();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(images.shop, 0, 0, canvas.width, canvas.height);
+
+        // Ladenschild oben
         ctx.fillStyle = '#5c3a21';
-        ctx.fillRect(480, 200, 220, 150);
+        ctx.fillRect(545, 6, 210, 30);
+        ctx.strokeStyle = '#2b1b0c';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(545, 6, 210, 30);
         ctx.fillStyle = '#ffcc00';
-        ctx.fillText('BASS PRO SHOP', 510, 240);
+        ctx.font = 'bold 18px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('FISHING SHOP', 650, 28);
+        ctx.textAlign = 'left';
 
-        ctx.fillStyle = '#d9534f';
-        ctx.fillRect(560, 130, 60, 90);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(575, 145, 10, 10);
+        // Ladenbesitzer
+        drawSprite(images.owner, OWNER.x, OWNER.feetY, OWNER.w, OWNER.h, false);
 
-        ctx.fillStyle = '#337ab7';
-        ctx.fillRect(playerX - 12, playerY - 50, 24, 50);
-        ctx.fillStyle = '#ffdbac';
-        ctx.fillRect(playerX - 8, playerY - 70, 16, 20);
+        // Theke wieder vorn drüber zeichnen, damit der Besitzer hinter dem Tresen steht
+        ctx.drawImage(images.shop, COUNTER_CLIP.x, COUNTER_CLIP.y, COUNTER_CLIP.w, COUNTER_CLIP.h,
+                                   COUNTER_CLIP.x, COUNTER_CLIP.y, COUNTER_CLIP.w, COUNTER_CLIP.h);
 
-        ctx.fillStyle = '#fff';
-        ctx.font = '14px monospace';
-        ctx.fillText('Inventar: ' + (inventory.length > 0 ? inventory.join(', ') : 'Leer'), 20, 30);
+        // Hauptfigur (Standbild oder Laufbild)
+        const playerImg = images['player_' + (frame + 1)];
+        drawSprite(playerImg, playerX, FLOOR_Y, PLAYER_W, PLAYER_H, facing < 0);
     }
 
     function gameLoop() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawShop();
+        update();
+        draw();
         requestAnimationFrame(gameLoop);
     }
-
-    gameLoop();
 </script>
 
 </body>
