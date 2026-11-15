@@ -1,3 +1,0 @@
-samsungtvws>=3.0
-flask>=3.0
-pillow>=10.0
