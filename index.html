@@ -38,9 +38,10 @@
     const ctx = canvas.getContext('2d');
 
     // ---------- Einstellungen ----------
-    const FLOOR_Y = 400;            // Füße der Figur auf dem Boden (y-Position)
-    const PLAYER_W = 150, PLAYER_H = 130;
-    const WALK_SPEED = 2.5;         // Pixel pro Bild beim Laufen
+    const FLOOR_Y = 420;            // Füße der Figur auf dem Boden (y-Position)
+    const PLAYER_SCALE = 1.75;      // Wie stark die Figur vergrößert wird (passend zu Raum und Besitzer)
+    const PLAYER_W = 150 * PLAYER_SCALE, PLAYER_H = 130 * PLAYER_SCALE;
+    const WALK_SPEED = 3.5;         // Pixel pro Bild beim Laufen
     const OWNER = { x: 560, feetY: 300, w: 150, h: 160 };
     const COUNTER_CLIP = { x: 400, y: 255, w: 300, h: 145 }; // Bereich der Theke, der den Besitzer verdeckt
     const COUNTER_STAND_X = 470;    // Wo die Figur beim Besitzer stehen bleibt
@@ -100,7 +101,7 @@
     }
 
     function walkTo(x, action, message) {
-        targetX = Math.max(40, Math.min(760, x));
+        targetX = Math.max(60, Math.min(740, x));
         pendingAction = action;
         if (message) setStatus(message);
     }
