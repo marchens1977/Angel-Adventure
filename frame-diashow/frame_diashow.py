@@ -32,14 +32,15 @@ except ImportError:  # damit die Webseite auch ohne Bibliothek startet
 # Ordner und Dateien
 # ------------------------------------------------------------------
 HIER = Path(__file__).resolve().parent
-BILDER_ORDNER = Path(os.environ.get("FRAME_BILDER", HIER / "bilder"))
+STANDARD_ORDNER = str(os.environ.get("FRAME_BILDER", HIER / "bilder"))
 VORBEREITET = HIER / ".vorbereitet"          # verkleinerte Kopien fuer den TV
 EINSTELLUNGEN = HIER / "einstellungen.json"  # TV-Adresse, Intervall ...
 HOCHGELADEN = HIER / "hochgeladen.json"      # welches Bild hat auf dem TV welche Nummer
 TOKEN_DATEI = HIER / "tv-token.txt"          # "Schluessel" nach dem Erlauben am TV
 
 ERLAUBTE_ENDUNGEN = {".jpg", ".jpeg", ".png", ".heic", ".webp", ".bmp"}
-STANDARD = {"tv_ip": "", "minuten": 3, "zufall": False, "passepartout": "none"}
+STANDARD = {"tv_ip": "", "minuten": 3, "zufall": False, "passepartout": "none",
+            "ordner": STANDARD_ORDNER, "tv_selbst": False}
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("frame")
@@ -62,10 +63,16 @@ def speichere_json(datei, daten):
     Path(datei).write_text(json.dumps(daten, indent=2, ensure_ascii=False))
 
 
+def bilder_ordner():
+    """Der Ordner mit den Bildern (in den Einstellungen aenderbar)."""
+    return Path(lade_json(EINSTELLUNGEN, STANDARD)["ordner"]).expanduser()
+
+
 def bilder_liste():
-    BILDER_ORDNER.mkdir(parents=True, exist_ok=True)
+    ordner = bilder_ordner()
+    ordner.mkdir(parents=True, exist_ok=True)
     return sorted(
-        p.name for p in BILDER_ORDNER.iterdir()
+        p.name for p in ordner.iterdir()
         if p.is_file() and p.suffix.lower() in ERLAUBTE_ENDUNGEN
     )
 
@@ -73,7 +80,7 @@ def bilder_liste():
 def bild_vorbereiten(name):
     """Dreht das Bild richtig herum und verkleinert es auf 4K (3840x2160) als JPG."""
     VORBEREITET.mkdir(exist_ok=True)
-    quelle = BILDER_ORDNER / name
+    quelle = bilder_ordner() / name
     ziel = VORBEREITET / (Path(name).stem + ".jpg")
     if ziel.exists() and ziel.stat().st_mtime >= quelle.stat().st_mtime:
         return ziel
@@ -137,6 +144,32 @@ class Fernseher:
             finally:
                 tv.close()
 
+    def tv_diashow(self, ip, minuten, zufall, erstes_bild):
+        """Laesst den Fernseher die Diashow selbst abspielen (Ordner 'Meine Fotos').
+        Dann muss das Handy/der Pi nicht eingeschaltet bleiben."""
+        with self.sperre:
+            tv = self.verbinden(ip)
+            try:
+                tv.select_image(erstes_bild, category="MY-C0002", show=True)
+                dauer = max(1, round(float(minuten)))
+                try:
+                    tv.set_slideshow_status(duration=dauer, type=zufall, category_id="MY-C0002")
+                except Exception:  # aeltere Modelle kennen nur diesen Befehl
+                    tv.set_auto_rotation_status(duration=dauer, type=zufall, category_id="MY-C0002")
+            finally:
+                tv.close()
+
+    def tv_diashow_aus(self, ip):
+        with self.sperre:
+            tv = self.verbinden(ip)
+            try:
+                try:
+                    tv.set_slideshow_status(duration=0, category_id="MY-C0002")
+                except Exception:
+                    tv.set_auto_rotation_status(duration=0, category_id="MY-C0002")
+            finally:
+                tv.close()
+
     def kunstmodus(self, ip, an):
         with self.sperre:
             tv = self.verbinden(ip)
@@ -191,6 +224,18 @@ class Diashow:
                                      fortschritt=self._setze_status)
         except Exception as e:
             self._setze_status(f"Fehler: {e}")
+            self.laeuft = False
+            return
+
+        if cfg["tv_selbst"]:
+            try:
+                erstes = zuordnung[[n for n in namen if n in zuordnung][0]]
+                TV.tv_diashow(cfg["tv_ip"], cfg["minuten"], cfg["zufall"], erstes)
+                self._setze_status("✅ Der Fernseher spielt die Diashow jetzt selbst ab "
+                                   "(alle Bilder unter 'Meine Fotos'). Du kannst das Handy weglegen.")
+            except Exception as e:
+                self._setze_status(f"Fehler: Der Fernseher kann die Diashow nicht selbst abspielen ({e}). "
+                                   "Schalte in den Einstellungen 'Fernseher spielt selbst ab' aus.")
             self.laeuft = False
             return
 
@@ -264,7 +309,7 @@ SEITE = """<!doctype html>
   <input type="file" name="fotos" accept="image/*" multiple required>
   <button>⬆️ Hochladen</button>
  </form>
- <p class="klein">Die Fotos landen im Ordner „bilder“ auf dem Raspberry Pi.</p>
+ <p class="klein">Die Fotos werden in den Bilder-Ordner (siehe Einstellungen) kopiert.</p>
 </section>
 
 <section><h2>Bilder im Ordner ({{ bilder|length }})</h2>
@@ -288,6 +333,11 @@ SEITE = """<!doctype html>
   <label>Jedes Bild zeigen für … Minuten (0.5 = 30 Sekunden)</label>
   <input name="minuten" type="number" step="0.25" min="0.25" value="{{ cfg.minuten }}">
   <label><input type="checkbox" name="zufall" {{ 'checked' if cfg.zufall }}> Zufällige Reihenfolge</label>
+  <label><input type="checkbox" name="tv_selbst" {{ 'checked' if cfg.tv_selbst }}>
+   Fernseher spielt die Diashow selbst ab (Handy kann danach aus sein; ganze Minuten; zeigt alle Bilder unter „Meine Fotos“)</label>
+  <label>Bilder-Ordner</label>
+  <input name="ordner" value="{{ cfg.ordner }}" style="width:100%">
+  <span class="klein">Auf dem Handy z.B. <code>/storage/emulated/0/Pictures/Frame</code> oder <code>/storage/emulated/0/DCIM/Camera</code></span>
   <label>Passepartout (Rahmen um das Bild)</label>
   <select name="passepartout">
    {% for wert, text in [('none','kein Rahmen'),('shadowbox_polar','Schattenbox weiß'),('modern_polar','Modern weiß'),('modern_warm','Modern warm'),('flexible_polar','Schmal weiß')] %}
@@ -340,7 +390,7 @@ def status_json():
 
 @app.get("/vorschau/<path:name>")
 def vorschau(name):
-    with Image.open(BILDER_ORDNER / sicherer_name(name)) as img:
+    with Image.open(bilder_ordner() / sicherer_name(name)) as img:
         img = ImageOps.exif_transpose(img).convert("RGB")
         img.thumbnail((320, 320))
         puffer = io.BytesIO()
@@ -359,6 +409,9 @@ def start():
 @app.post("/stopp")
 def stopp():
     SHOW.stoppen()
+    cfg = lade_json(EINSTELLUNGEN, STANDARD)
+    if cfg["tv_selbst"]:
+        im_hintergrund(TV.tv_diashow_aus, cfg["tv_ip"])
     SHOW.status = "Diashow gestoppt. Das letzte Bild bleibt auf dem Fernseher stehen."
     return redirect(url_for("startseite"))
 
@@ -380,12 +433,13 @@ def jetzt(name):
 
 @app.post("/hinzufuegen")
 def hinzufuegen():
-    BILDER_ORDNER.mkdir(parents=True, exist_ok=True)
+    ordner = bilder_ordner()
+    ordner.mkdir(parents=True, exist_ok=True)
     anzahl = 0
     for datei in request.files.getlist("fotos"):
         name = Path(datei.filename or "").name
         if name and Path(name).suffix.lower() in ERLAUBTE_ENDUNGEN:
-            datei.save(BILDER_ORDNER / name)
+            datei.save(ordner / name)
             anzahl += 1
     SHOW.status = f"{anzahl} Foto(s) gespeichert."
     return redirect(url_for("startseite"))
@@ -396,7 +450,7 @@ def entfernen(name):
     name = sicherer_name(name)
     zuordnung = lade_json(HOCHGELADEN, {})
     cid = zuordnung.pop(name, None)
-    (BILDER_ORDNER / name).unlink(missing_ok=True)
+    (bilder_ordner() / name).unlink(missing_ok=True)
     (VORBEREITET / (Path(name).stem + ".jpg")).unlink(missing_ok=True)
     speichere_json(HOCHGELADEN, zuordnung)
     if cid:
@@ -414,6 +468,9 @@ def einstellungen():
     except ValueError:
         pass
     cfg["zufall"] = "zufall" in request.form
+    cfg["tv_selbst"] = "tv_selbst" in request.form
+    if request.form.get("ordner", "").strip():
+        cfg["ordner"] = request.form["ordner"].strip()
     cfg["passepartout"] = request.form.get("passepartout", "none")
     speichere_json(EINSTELLUNGEN, cfg)
     SHOW.status = "Einstellungen gespeichert. (Gilt ab dem nächsten Start der Diashow.)"
@@ -455,5 +512,5 @@ def tv_aufraeumen():
 
 if __name__ == "__main__":
     port = int(os.environ.get("FRAME_PORT", 8080))
-    log.info("Webseite laeuft auf Port %s. Bilder-Ordner: %s", port, BILDER_ORDNER)
+    log.info("Webseite laeuft auf Port %s. Bilder-Ordner: %s", port, bilder_ordner())
     app.run(host="0.0.0.0", port=port, threaded=True)
