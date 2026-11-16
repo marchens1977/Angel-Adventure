@@ -22,8 +22,6 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
   - `shop.jpg` – Hintergrund des Ladens (800 × 450)
   - `owner.png` – Ladenbesitzer
   - `player_1.png` … `player_6.png` – Laufanimation der Spielfigur (Bild 1 ist auch das Standbild)
-- `pi-mikrofon/` – separates Hilfsprogramm (nicht Teil des Spiels): Handy als Sprach-Fernbedienung für den
-  Raspberry Pi. `sprachsteuerung.py` läuft auf dem Pi, das Handy öffnet `https://<Pi-IP>:8443`.
 
 ## 2. Wichtige Regeln und Entscheidungen
 
@@ -41,7 +39,6 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
 | vor 2026-11-15 | Erste Version hochgeladen; Grafiken eingebaut; Laden in „Fishing Shop“ umbenannt | – |
 | 2026-11-15 | Spielfigur passend zu Raum und Besitzer vergrößert, etwas weiter vorne platziert, schnelleres Laufen | #1 |
 | 2026-11-16 | Dieses Projekt-Tagebuch angelegt | – |
-| 2026-11-16 | Hilfsprogramm `pi-mikrofon` (Handy als Sprachsteuerung für den Pi) | – |
 
 ## 4. Offene Ideen / nächste Schritte
 
