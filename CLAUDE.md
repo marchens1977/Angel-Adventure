@@ -22,6 +22,7 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
   - `shop.jpg` – Hintergrund des Ladens (800 × 450)
   - `owner.png` – Ladenbesitzer
   - `player_1.png` … `player_6.png` – Laufanimation der Spielfigur (Bild 1 ist auch das Standbild)
+- `werkzeuge/` – Hilfsprogramme (siehe Abschnitt 8)
 
 ## 2. Wichtige Regeln und Entscheidungen
 
@@ -39,6 +40,7 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
 | vor 2026-11-15 | Erste Version hochgeladen; Grafiken eingebaut; Laden in „Fishing Shop“ umbenannt | – |
 | 2026-11-15 | Spielfigur passend zu Raum und Besitzer vergrößert, etwas weiter vorne platziert, schnelleres Laufen | #1 |
 | 2026-11-16 | Dieses Projekt-Tagebuch angelegt | – |
+| 2026-11-18 | Regel „Hilfsprogramme und Tests gehören ins Projekt“ ergänzt; Vorschaubild-Werkzeug gesichert | – |
 
 ## 4. Offene Ideen / nächste Schritte
 
@@ -65,3 +67,28 @@ der Antwort: „Tipp: Du kannst jetzt mit /model claude-opus-5-5 zurückstellen.
 ## 7. Pflege dieses Tagebuchs
 
 Nach jeder größeren Änderung dieses Tagebuch aktualisieren (Verlauf, Entscheidungen, offene Ideen).
+
+## 8. Hilfsprogramme und Tests gehören ins Projekt
+
+1. Automatische Prüfungen (Tests) und Hilfsprogramme, die über eine einzelne Aufgabe hinaus nützlich sind,
+   werden im Projekt gespeichert (Ordner `werkzeuge/` oder `test/`) – nicht nur im Arbeitsbereich der Sitzung,
+   der beim Archivieren verloren geht.
+2. Hier im Tagebuch steht, wie man sie startet und was sie prüfen.
+3. Nach jeder Code-Änderung die vorhandenen Prüfungen laufen lassen; bei neuen Funktionen passende Prüfpunkte ergänzen.
+4. Gibt es noch keine automatische Prüfung, bei der nächsten Code-Änderung eine einfache anlegen.
+5. Was Claude nicht selbst testen kann, hier als Test für den Nutzer vermerken.
+
+### Vorhandene Hilfsprogramme
+
+- `werkzeuge/screenshot.js` – macht ein Vorschaubild der Spielfläche (Startzustand), um Größen und
+  Positionen zu prüfen. Start im Projektordner: `node werkzeuge/screenshot.js vorschau.png`
+  (braucht Playwright mit Chromium, in Claude-Cloud-Sitzungen vorhanden). Das Bild nicht ins Projekt hochladen.
+
+### Automatische Prüfungen
+
+- Noch keine. Bei der nächsten Code-Änderung eine einfache anlegen (z. B. Spiel lädt ohne Fehler,
+  Gespräch mit dem Besitzer und Rute nehmen funktionieren).
+
+### Tests für den Nutzer (kann Claude nicht selbst prüfen)
+
+- Spiel auf dem echten Samsung-Handy (Chrome) öffnen: Passt die Größe, lässt sich alles gut antippen?
