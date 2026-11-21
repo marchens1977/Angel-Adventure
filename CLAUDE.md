@@ -17,7 +17,10 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
   - Oben im Skript stehen die **Einstellungen** (Bodenhöhe, Größe der Figur `PLAYER_SCALE`,
     Laufgeschwindigkeit, Positionen von Besitzer, Theke und Regal, Klickbereiche).
   - Gezeichnet wird auf einer Zeichenfläche (Canvas) mit 800 × 450 Pixeln. Am Handy wird sie verkleinert.
-  - Aktionen (Verben): „Gehe zu“, „Nimm“, „Rede mit“.
+  - Aktionen (Verben): „Gehe zu“, „Schau an“, „Nimm“, „Benutze“, „Rede mit“, „Gib“.
+  - Klickbereiche stehen in der Liste `HOTSPOTS` (Name, Rechteck, Standplatz der Figur, Funktion),
+    Gegenstände in `ITEMS` (Name + Beschreibung). Das Inventar besteht aus Knöpfen: „Benutze“ → Gegenstand
+    antippen → Ziel antippen (Ding im Bild oder anderer Gegenstand); „Gib“ genauso.
 - `assets/` – Grafiken:
   - `start.jpg` – Bild für den Startbildschirm (Flussufer mit Steg und Laden, 1024 × 576).
     Erstellt mit ElevenLabs (Modell gpt-image-2.5-sunburst, `shop.jpg` als Stil-Vorlage), Kosten ca. 433 Credits
@@ -58,11 +61,13 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
 | 2026-11-21 | Als installierbare Web-App „Megabarsch“ (Manifest, Symbole aus dem Startbild, Offline-Helfer); Prüfung erweitert | – |
 | 2026-11-21 | Startbildschirm mit neuem Bild (ElevenLabs) und Knopf „Spiel starten“; erste automatische Prüfung `test/test.js` | – |
 | 2026-11-21 | Drehbuch `DREHBUCH.md` (Geschichte, 7 Szenen, 15 Rätsel), Intro-Plan (Abschnitt 9) und Grafik-Plan (Abschnitt 10) festgehalten | – |
+| 2026-11-21 | Kapitel 1, Teil Laden: neue Aktionen Schau an/Benutze/Gib, Inventar-Knöpfe, Rätsel 1–3 (Rute, Kescher → Schlüssel an der Lampe, Lager → Schnur + Würmerdose, Schnur + Rute = Angel), Pinnwand mit Aushang des Barons | – |
 
 ## 4. Offene Ideen / nächste Schritte
 
-- **Nächster Schritt:** Drehbuch (`DREHBUCH.md`) mit dem Nutzer abstimmen, dann Kapitel 1 bauen
-  (Aktionen „Schau an“, „Benutze“, „Gib“; Rätsel 1–3 im Laden)
+- **Nächster Schritt:** Kapitel 1 weiterbauen: Ausgang aus dem Laden zur Szene 2 (Steg, Bild `start.jpg`),
+  danach Kneipe. Vorher Grafiken nach Plan (Abschnitt 10) mit dem Nutzer abstimmen (Kosten nennen).
+- Gegenstände im Inventar sind noch Text-Knöpfe; Bilder kommen mit dem Gegenstands-Bogen
 - Intro erst ganz am Ende bauen – Plan in Abschnitt 9
 
 - Neuer Raum „See“ (Ausgang aus dem Laden) – das Startbild `start.jpg` könnte dafür als Vorlage dienen
@@ -112,7 +117,9 @@ Nach jeder größeren Änderung dieses Tagebuch aktualisieren (Verlauf, Entschei
   Webserver (wie GitHub Pages). Prüft die installierbare App (Manifest eingebunden, Name „Megabarsch“,
   Symbole laden in richtiger Größe, Hintergrund-Helfer angemeldet) und in Handy-Größe: Startbildschirm und
   Knopf sichtbar, Aktions-Leiste dort versteckt, Startbild lädt, Knopf startet das Spiel, Gespräch mit dem
-  Besitzer gibt die Aufgabe, Rute landet im Inventar, keine Fehler beim Laden. Nach jeder Änderung laufen lassen.
+  Besitzer gibt die Aufgabe, Rute landet im Inventar, alle 6 Aktions-Knöpfe da, komplette Rätsel-Kette im Laden
+  (Lager erst zu, Kescher nehmen, Schlüssel von der Lampe, Lager auf, Schnur + Rute = Angel), keine Fehler beim Laden.
+  Nach jeder Änderung laufen lassen.
 
 ### Tests für den Nutzer (kann Claude nicht selbst prüfen)
 
@@ -124,6 +131,11 @@ Nach jeder größeren Änderung dieses Tagebuch aktualisieren (Verlauf, Entschei
       Erscheint das Symbol mit dem Steg-Bild und darunter „Megabarsch“?
 - [ ] App über das Symbol öffnen: Startet sie ohne Browser-Leiste?
 - [ ] Offline: Flugmodus an, App öffnen – läuft das Spiel trotzdem?
+- [ ] Rätsel im Laden einmal selbst durchspielen (Lösung: mit Besitzer reden → Rute aus Regal → nochmal reden →
+      Lampe anschauen → Kescher hinter dem Tresen nehmen → Benutze Kescher mit Lampe → Benutze Schlüssel mit
+      Lagertür (Perlenvorhang) → Benutze Angelschnur mit Rute). Sind die Stellen gut zu treffen?
+- [ ] Sieht man den kleinen Schlüssel unter der Lampe am Handy?
+- [ ] Passen die 6 Aktions-Knöpfe gut auf den Bildschirm?
 
 ## 9. Plan fürs Intro (Anfangssequenz) – so wollen wir es machen
 

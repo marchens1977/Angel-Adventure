@@ -20,7 +20,9 @@
         .verb-btn:hover { background: #444; }
         .verb-btn.active { border-color: #ff0; background: #555; }
         #status-text { color: #0ff; font-weight: bold; font-size: 14px; min-height: 2.4em; }
-        #inventory { color: #fff; font-size: 13px; }
+        #inventory { color: #fff; font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .item-btn { background: #2b1b0c; color: #fff; border: 1px solid #8a6a3a; padding: 6px 10px; cursor: pointer; font-family: monospace; }
+        .item-btn.selected { border-color: #ff0; color: #ff0; }
         /* Startbildschirm */
         #screen { position: relative; }
         #start-screen { position: absolute; inset: 0; background: url('assets/start.jpg') center / cover no-repeat;
@@ -50,8 +52,11 @@
             <div class="verbs">
                 <span>Aktion: <span id="current-verb">Gehe zu</span> |</span>
                 <button class="verb-btn active" data-verb="Gehe" onclick="setVerb('Gehe')">Gehe zu</button>
+                <button class="verb-btn" data-verb="Schau an" onclick="setVerb('Schau an')">Schau an</button>
                 <button class="verb-btn" data-verb="Nimm" onclick="setVerb('Nimm')">Nimm</button>
+                <button class="verb-btn" data-verb="Benutze" onclick="setVerb('Benutze')">Benutze</button>
                 <button class="verb-btn" data-verb="Rede mit" onclick="setVerb('Rede mit')">Rede mit</button>
+                <button class="verb-btn" data-verb="Gib" onclick="setVerb('Gib')">Gib</button>
             </div>
             <div id="status-text">Klicke im Laden, um zu interagieren.</div>
             <div id="inventory">Inventar: Leer</div>
@@ -71,10 +76,7 @@
     const COUNTER_CLIP = { x: 400, y: 255, w: 300, h: 145 }; // Bereich der Theke, der den Besitzer verdeckt
     const COUNTER_STAND_X = 470;    // Wo die Figur beim Besitzer stehen bleibt
     const SHELF_STAND_X = 230;      // Wo die Figur beim Regal stehen bleibt
-
-    // Klickbereiche (in Canvas-Pixeln, 800 x 450)
-    const OWNER_ZONE = { x1: 430, x2: 700, y1: 120, y2: 370 };
-    const SHELF_ZONE = { x1: 90, x2: 380, y1: 60, y2: 380 };
+    const KEY_POS = { x: 516, y: 100 }; // Wo der Schlüssel an der Lampe hängt
 
     // ---------- Spielzustand ----------
     let currentVerb = 'Gehe';
@@ -84,9 +86,25 @@
     let facing = 1;                 // 1 = rechts, -1 = links
     let frame = 0;                  // 0..5 = Laufbild, 0 ist auch Standbild
     let frameTick = 0;
-    let hasQuest = false;
-    let hasRod = false;
-    let inventory = [];
+    let hasQuest = false;           // Auftrag vom Besitzer bekommen
+    let hasRod = false;             // Rute aus dem Regal genommen
+    let knowsLine = false;          // weiß, dass die Schnur im Lager ist
+    let hasNet = false;             // Kescher genommen
+    let keyTaken = false;           // Schlüssel von der Lampe geholt
+    let storeOpen = false;          // Lager aufgeschlossen
+    let rodReady = false;           // Schnur an der Rute = fertige Angel
+    let inventory = [];             // Liste der Gegenstände (ihre Kürzel, siehe ITEMS)
+    let selectedItem = null;        // gewählter Gegenstand bei "Benutze ... mit" / "Gib ... an"
+
+    // ---------- Gegenstände ----------
+    const ITEMS = {
+        rute:      { name: 'Rute (ohne Schnur)', look: 'Eine robuste Baitcast-Rute. Nur leider ohne Schnur.' },
+        kescher:   { name: 'Kescher',            look: 'Ein alter Kescher mit langem Stiel. Damit kommt man überall hin.' },
+        schluessel:{ name: 'Schlüssel',          look: 'Ein kleiner Messingschlüssel. Auf dem Anhänger steht „LAGER“.' },
+        schnur:    { name: 'Angelschnur',        look: 'Eine Rolle extra starke Angelschnur. „Hält bis 5 Kilo“, steht drauf.' },
+        dose:      { name: 'Würmerdose (leer)',  look: 'Eine leere Würmerdose. Fehlen nur noch die Würmer.' },
+        angel:     { name: 'Angel',              look: 'Rute mit Schnur – eine richtige Angel! Jetzt fehlen nur Köder.' }
+    };
 
     // ---------- Bilder laden ----------
     const images = {};
@@ -121,6 +139,8 @@
     // ---------- Bedienung ----------
     function setVerb(verb) {
         currentVerb = verb;
+        selectedItem = null;
+        updateInventory();
         document.getElementById('current-verb').innerText = verb;
         document.querySelectorAll('.verb-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.verb === verb);
@@ -131,9 +151,21 @@
         document.getElementById('status-text').innerText = text;
     }
 
+    // Inventar als Knöpfe anzeigen (antippen: anschauen, benutzen, geben)
     function updateInventory() {
-        document.getElementById('inventory').innerText =
-            'Inventar: ' + (inventory.length > 0 ? inventory.join(', ') : 'Leer');
+        const box = document.getElementById('inventory');
+        box.innerHTML = '';
+        const label = document.createElement('span');
+        label.innerText = 'Inventar:' + (inventory.length ? '' : ' Leer');
+        box.appendChild(label);
+        inventory.forEach(id => {
+            const b = document.createElement('button');
+            b.className = 'item-btn' + (id === selectedItem ? ' selected' : '');
+            b.dataset.item = id;
+            b.innerText = ITEMS[id].name;
+            b.onclick = () => clickItem(id);
+            box.appendChild(b);
+        });
     }
 
     function walkTo(x, action, message) {
@@ -148,49 +180,199 @@
         const x = (e.clientX - rect.left) * canvas.width / rect.width;
         const y = (e.clientY - rect.top) * canvas.height / rect.height;
 
-        if (x >= OWNER_ZONE.x1 && x <= OWNER_ZONE.x2 && y >= OWNER_ZONE.y1 && y <= OWNER_ZONE.y2) {
-            walkTo(COUNTER_STAND_X, () => ownerAction(currentVerb), 'Du gehst zum Tresen.');
-        } else if (x >= SHELF_ZONE.x1 && x <= SHELF_ZONE.x2 && y >= SHELF_ZONE.y1 && y <= SHELF_ZONE.y2) {
-            walkTo(SHELF_STAND_X, () => shelfAction(currentVerb), 'Du gehst zum Regal.');
-        } else {
+        const spot = HOTSPOTS.find(h => x >= h.x1 && x <= h.x2 && y >= h.y1 && y <= h.y2);
+        if (!spot || currentVerb === 'Gehe') {
             walkTo(x, null, null);
+            return;
         }
+        const verb = currentVerb, item = selectedItem;
+        // "Schau an" geht ohne Hinlaufen
+        if (verb === 'Schau an') { spot.act(verb, null); return; }
+        walkTo(spot.stand, () => { spot.act(verb, item); resetSelection(); }, 'Du gehst zu: ' + spot.name + '.');
     });
 
-    // ---------- Aktionen, wenn die Figur angekommen ist ----------
-    function ownerAction(verb) {
-        if (verb === 'Rede mit') {
-            if (!hasQuest) {
-                setStatus("Besitzer: 'Fang mir den Megabarsch im See für die Werbung!'");
-                hasQuest = true;
-            } else if (!hasRod) {
-                setStatus("Besitzer: 'Nimm dir drüben eine Rute aus dem Regal!'");
-            } else {
-                setStatus("Besitzer: 'Worauf wartest du? Ab an den See!'");
+    // ---------- Gegenstände im Inventar antippen ----------
+    function clickItem(id) {
+        if (currentVerb === 'Benutze' || currentVerb === 'Gib') {
+            if (!selectedItem) {
+                selectedItem = id;
+                document.getElementById('current-verb').innerText =
+                    currentVerb === 'Benutze' ? 'Benutze ' + ITEMS[id].name + ' mit …' : 'Gib ' + ITEMS[id].name + ' an …';
+                updateInventory();
+                return;
             }
-        } else if (verb === 'Nimm') {
-            setStatus("Den Besitzer kannst du nicht einpacken.");
+            if (currentVerb === 'Benutze' && selectedItem !== id) {
+                combine(selectedItem, id);
+                resetSelection();
+                return;
+            }
+            resetSelection();
+            return;
+        }
+        if (currentVerb === 'Rede mit') { setStatus('Selbstgespräche mit einem Gegenstand? Lieber nicht.'); return; }
+        if (currentVerb === 'Nimm') { setStatus('Das hast du schon eingepackt.'); return; }
+        setStatus(ITEMS[id].look);
+    }
+
+    // Zwei Gegenstände kombinieren
+    function combine(a, b) {
+        const paar = [a, b].sort().join('+');
+        if (paar === 'rute+schnur') {
+            removeItem('rute'); removeItem('schnur'); addItem('angel');
+            rodReady = true;
+            setStatus('Du fädelst die Schnur ein und knotest sie fest. Fertig ist die Angel!');
         } else {
-            setStatus("Du stehst jetzt am Tresen.");
+            setStatus('Das passt nicht zusammen.');
         }
     }
 
-    function shelfAction(verb) {
-        if (verb === 'Nimm') {
+    function addItem(id) { if (!inventory.includes(id)) inventory.push(id); updateInventory(); }
+    function removeItem(id) { inventory = inventory.filter(i => i !== id); updateInventory(); }
+    function hasItem(id) { return inventory.includes(id); }
+
+    function resetSelection() {
+        selectedItem = null;
+        document.getElementById('current-verb').innerText = currentVerb;
+        updateInventory();
+    }
+
+    // ---------- Klickbereiche im Laden (in Canvas-Pixeln, 800 x 450) ----------
+    // Reihenfolge wichtig: kleine Bereiche zuerst. "stand" = wo die Figur stehen bleibt.
+    const HOTSPOTS = [
+        { name: 'Lampe', x1: 492, x2: 542, y1: 15, y2: 120, stand: 480, act: lampAction },
+        { name: 'Kescher', x1: 435, x2: 492, y1: 112, y2: 205, stand: 450, act: netAction },
+        { name: 'Kasse', x1: 448, x2: 514, y1: 185, y2: 248, stand: 470, act: registerAction },
+        { name: 'Glas', x1: 612, x2: 662, y1: 220, y2: 275, stand: 600, act: jarAction },
+        { name: 'Lagertür', x1: 612, x2: 722, y1: 100, y2: 335, stand: 715, act: doorAction },
+        { name: 'Pinnwand', x1: 728, x2: 800, y1: 110, y2: 225, stand: 720, act: boardAction },
+        { name: 'Besitzer', x1: 490, x2: 612, y1: 110, y2: 370, stand: COUNTER_STAND_X, act: ownerAction },
+        { name: 'Regal', x1: 90, x2: 380, y1: 60, y2: 380, stand: SHELF_STAND_X, act: shelfAction }
+    ];
+
+    // ---------- Was bei den einzelnen Dingen passiert ----------
+    function ownerAction(verb, item) {
+        if (verb === 'Schau an') {
+            setStatus('Herr Kiemer, der Ladenbesitzer. Brummig, aber mit dem Herz am rechten Fleck.');
+        } else if (verb === 'Rede mit') {
+            if (!hasQuest) {
+                setStatus("Kiemer: 'Hast du's gehört? Baron von Blinker will den Silbersee kaufen! Nur wenn jemand " +
+                          "bis Sonntag den Megabarsch lebend fängt, ist der See gerettet. Nimm dir eine Rute aus dem Regal!'");
+                hasQuest = true;
+            } else if (!hasRod) {
+                setStatus("Kiemer: 'Nimm dir drüben eine Rute aus dem Regal!'");
+            } else if (!storeOpen) {
+                setStatus("Kiemer: 'Schnur? Die gute liegt im Lager. Aber den Schlüssel hab ich irgendwo " +
+                          "aufgehängt … ich werd alt.'");
+                knowsLine = true;
+            } else if (!rodReady) {
+                setStatus("Kiemer: 'Na, Schnur gefunden? Dann knote sie an die Rute!'");
+            } else {
+                setStatus("Kiemer: 'Prima Angel! Jetzt fehlen nur noch Köder. Würmer findest du draußen am Ufer.' " +
+                          "(Fortsetzung folgt …)");
+            }
+        } else if (verb === 'Gib' && item) {
+            setStatus("Kiemer: 'Behalt das mal lieber. Das brauchst du noch.'");
+        } else if (verb === 'Nimm') {
+            setStatus('Den Besitzer kannst du nicht einpacken.');
+        } else {
+            setStatus("Kiemer: 'Kann ich helfen?'");
+        }
+    }
+
+    function shelfAction(verb, item) {
+        if (verb === 'Schau an') {
+            setStatus('Ruten, Rollen, Blinker, Posen – ein Paradies für Angler.');
+        } else if (verb === 'Nimm') {
             if (hasQuest && !hasRod) {
                 hasRod = true;
-                inventory.push('Baitcast-Rute');
-                updateInventory();
-                setStatus("Du nimmst eine robuste Rute aus dem Regal.");
+                addItem('rute');
+                setStatus('Du nimmst eine robuste Rute aus dem Regal. Moment … da ist ja gar keine Schnur dran!');
             } else if (hasRod) {
-                setStatus("Du hast bereits eine Rute eingepackt.");
+                setStatus('Du hast bereits eine Rute eingepackt.');
             } else {
-                setStatus("Das solltest du jetzt noch nicht mitnehmen.");
+                setStatus('Das solltest du jetzt noch nicht mitnehmen.');
             }
         } else if (verb === 'Rede mit') {
-            setStatus("Die Ruten antworten nicht.");
+            setStatus('Die Ruten antworten nicht.');
         } else {
-            setStatus("Du stehst vor dem Regal.");
+            setStatus('Du stehst vor dem Regal.');
+        }
+    }
+
+    function lampAction(verb, item) {
+        if (verb === 'Schau an') {
+            setStatus(keyTaken ? 'Eine alte Petroleumlampe. Gemütliches Licht.'
+                               : 'Eine alte Petroleumlampe. Daran baumelt ein kleiner Schlüssel!');
+        } else if (verb === 'Nimm') {
+            setStatus(keyTaken ? 'Die Lampe bleibt hängen.'
+                               : 'Der Schlüssel hängt viel zu hoch. Du bräuchtest etwas mit einem langen Stiel.');
+        } else if (verb === 'Benutze' && item === 'kescher') {
+            if (keyTaken) { setStatus('Da hängt nichts mehr.'); return; }
+            keyTaken = true;
+            addItem('schluessel');
+            setStatus("Du angelst mit dem Kescher nach dem Schlüssel … geschafft! Kiemer: 'Ach, DA war der!'");
+        } else if (verb === 'Benutze' && item) {
+            setStatus('Damit kommst du nicht hoch genug.');
+        } else if (verb === 'Rede mit') {
+            setStatus('Die Lampe schweigt. Sie ist eher der helle Typ.');
+        } else {
+            setStatus('Du stehst unter der Lampe.');
+        }
+    }
+
+    function netAction(verb, item) {
+        if (verb === 'Schau an') {
+            setStatus('Ein paar alte Kescher mit langen Stielen.');
+        } else if (verb === 'Nimm') {
+            if (hasNet) { setStatus('Ein Kescher reicht.'); return; }
+            if (!hasQuest) { setStatus("Kiemer: 'Hände weg, das ist Ware!'"); return; }
+            hasNet = true;
+            addItem('kescher');
+            setStatus("Kiemer: 'Den alten Kescher? Nimm ruhig, der ist eh nichts mehr wert.'");
+        } else {
+            setStatus('Die Kescher hängen ordentlich im Regal.');
+        }
+    }
+
+    function registerAction(verb, item) {
+        if (verb === 'Schau an') setStatus('Eine uralte Registrierkasse. Sie hat schon bessere Tage gesehen.');
+        else if (verb === 'Benutze') setStatus('Ding! Die Kasse ist leer. Das Geschäft läuft wohl nicht so gut.');
+        else if (verb === 'Nimm') setStatus("Kiemer: 'Lass das. Wirklich.'");
+        else setStatus('Die Kasse sagt nichts. Höchstens „Ding“.');
+    }
+
+    function jarAction(verb, item) {
+        if (verb === 'Schau an') setStatus('Ein Glas voller bunter Gummiwürmer. Ganz unten glitzert etwas.');
+        else if (verb === 'Nimm') setStatus("Kiemer: 'Finger weg von meinen Gummiwürmern!'");
+        else setStatus('Lecker sehen die nicht aus.');
+    }
+
+    function doorAction(verb, item) {
+        if (verb === 'Schau an') {
+            setStatus(storeOpen ? 'Das Lager. Hier hast du die Schnur gefunden.'
+                                : 'Hinter dem Perlenvorhang ist die Tür zum Lager.');
+        } else if (verb === 'Benutze' && item === 'schluessel') {
+            storeOpen = true;
+            removeItem('schluessel');
+            addItem('schnur');
+            addItem('dose');
+            setStatus('Du schließt das Lager auf und findest eine Rolle Angelschnur und eine leere Würmerdose. ' +
+                      'Den Schlüssel gibst du Kiemer zurück.');
+        } else if (verb === 'Benutze' || verb === 'Nimm') {
+            setStatus(storeOpen ? 'Im Lager ist nichts Nützliches mehr.' : 'Die Lagertür ist abgeschlossen.');
+        } else {
+            setStatus('Die Tür bleibt stumm.');
+        }
+    }
+
+    function boardAction(verb, item) {
+        if (verb === 'Schau an') {
+            setStatus("Ein Aushang: 'Der Silbersee wird am Sonntag an Baron von Blinker verkauft. " +
+                      "Gez. der Bürgermeister.' Daneben alte Fotos von Riesenfischen.");
+        } else if (verb === 'Nimm') {
+            setStatus('Der Aushang bleibt hängen. Das soll ruhig jeder lesen.');
+        } else {
+            setStatus('Eine Pinnwand voller Zettel.');
         }
     }
 
@@ -228,6 +410,20 @@
         ctx.restore();
     }
 
+    // Kleiner goldener Schlüssel, an einer Schnur hängend
+    function drawKey(x, y) {
+        ctx.save();
+        ctx.translate(x, y); ctx.scale(1.7, 1.7); ctx.translate(-x, -y); // etwas größer, damit man ihn am Handy sieht
+        ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 6); ctx.stroke();
+        ctx.fillStyle = '#e8c040'; ctx.strokeStyle = '#6a4a10';
+        ctx.beginPath(); ctx.arc(x, y + 9, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillRect(x - 1, y + 12, 2, 9);
+        ctx.fillRect(x + 1, y + 17, 3, 2);
+        ctx.fillRect(x + 1, y + 20, 2, 1);
+        ctx.restore();
+    }
+
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(images.shop, 0, 0, canvas.width, canvas.height);
@@ -243,6 +439,9 @@
         ctx.textAlign = 'center';
         ctx.fillText('FISHING SHOP', 650, 28);
         ctx.textAlign = 'left';
+
+        // Schlüssel an der Lampe (bis er geholt wird)
+        if (!keyTaken) drawKey(KEY_POS.x, KEY_POS.y);
 
         // Ladenbesitzer
         drawSprite(images.owner, OWNER.x, OWNER.feetY, OWNER.w, OWNER.h, false);

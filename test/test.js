@@ -1,7 +1,8 @@
 // Automatische Prüfung des Spiels.
 // Start (im Projektordner):  node test/test.js
 // Braucht Playwright mit Chromium (in Claude-Cloud-Sitzungen schon vorhanden).
-// Prüft: Startbildschirm, Start-Knopf, Gespräch mit dem Besitzer, Rute nehmen, keine Fehler,
+// Prüft: Startbildschirm, Start-Knopf, alle Aktionen, die Rätsel im Laden (Rute, Kescher, Schlüssel,
+// Lager, Schnur + Rute = Angel), keine Fehler,
 // und die installierbare App (Manifest, Symbole, Hintergrund-Helfer).
 // Das Spiel wird dafür über einen kleinen eigenen Webserver geöffnet (wie bei GitHub Pages).
 const path = require('path');
@@ -77,24 +78,71 @@ function pruefe(ok, text) {
   pruefe(!(await page.isVisible('#start-screen')), 'Nach dem Tippen ist der Startbildschirm weg');
   pruefe(await page.isVisible('#ui-bar'), 'Aktions-Leiste ist im Spiel sichtbar');
 
-  // Hilfsfunktion: auf eine Stelle der Spielfläche (800 x 450) tippen
+  // Hilfsfunktion: auf eine Stelle der Spielfläche (800 x 450) tippen und warten, bis die Figur angekommen ist
   async function tippe(x, y) {
     const box = await (await page.$('canvas')).boundingBox();
     await page.mouse.click(box.x + x * box.width / 800, box.y + y * box.height / 450);
-    await page.waitForTimeout(2500); // Figur laufen lassen
+    await page.waitForTimeout(100);
+    await page.waitForFunction(() => targetX === null, null, { timeout: 8000 });
+  }
+  const verb = v => page.click(`button[data-verb="${v}"]`);
+  const gegenstand = id => page.click(`#inventory button[data-item="${id}"]`);
+  const status = () => page.textContent('#status-text');
+  const inventar = () => page.textContent('#inventory');
+
+  // Alle Aktions-Knöpfe da?
+  for (const v of ['Gehe', 'Schau an', 'Nimm', 'Benutze', 'Rede mit', 'Gib']) {
+    pruefe(await page.isVisible(`button[data-verb="${v}"]`), `Aktion "${v}" ist da`);
   }
 
   // 3. Mit dem Besitzer reden
-  await page.click('button[data-verb="Rede mit"]');
+  await verb('Rede mit');
   await tippe(560, 250);
-  const status1 = await page.textContent('#status-text');
-  pruefe(status1.includes('Megabarsch'), 'Besitzer gibt die Aufgabe (Megabarsch)');
+  pruefe((await status()).includes('Megabarsch'), 'Besitzer gibt die Aufgabe (Megabarsch)');
 
   // 4. Rute nehmen
-  await page.click('button[data-verb="Nimm"]');
+  await verb('Nimm');
   await tippe(230, 200);
-  const inv = await page.textContent('#inventory');
-  pruefe(inv.includes('Rute'), 'Rute ist im Inventar');
+  pruefe((await inventar()).includes('Rute'), 'Rute ist im Inventar');
+
+  // 5. Rätsel 2: Schlüssel an der Lampe
+  await verb('Rede mit');
+  await tippe(560, 250);
+  pruefe((await status()).includes('Lager'), 'Besitzer erwähnt, dass die Schnur im Lager ist');
+  await verb('Schau an');
+  await tippe(516, 70);
+  pruefe((await status()).includes('Schlüssel'), 'Schau an Lampe zeigt den Schlüssel');
+  await verb('Benutze');
+  await tippe(665, 220);
+  pruefe((await status()).includes('abgeschlossen'), 'Lagertür ist zuerst abgeschlossen');
+  await verb('Nimm');
+  await tippe(460, 160);
+  pruefe((await inventar()).includes('Kescher'), 'Kescher ist im Inventar');
+  await verb('Benutze');
+  await gegenstand('kescher');
+  pruefe((await page.textContent('#current-verb')).includes('Kescher mit'), 'Anzeige "Benutze Kescher mit …"');
+  await tippe(516, 70);
+  pruefe((await inventar()).includes('Schlüssel'), 'Schlüssel mit dem Kescher von der Lampe geholt');
+
+  // 6. Rätsel 3: Lager aufschließen, Schnur an die Rute
+  await verb('Benutze');
+  await gegenstand('schluessel');
+  await tippe(665, 220);
+  const inv3 = await inventar();
+  pruefe(inv3.includes('Angelschnur') && inv3.includes('Würmerdose') && !inv3.includes('Schlüssel'),
+         'Lager aufgeschlossen: Schnur und Würmerdose im Inventar');
+  await verb('Schau an');
+  await gegenstand('schnur');
+  pruefe((await status()).includes('Angelschnur'), 'Schau an Gegenstand zeigt Beschreibung');
+  await verb('Benutze');
+  await gegenstand('schnur');
+  await gegenstand('rute');
+  const inv4 = await inventar();
+  pruefe(inv4.includes('Angel') && !inv4.includes('ohne Schnur') && !inv4.includes('Angelschnur'),
+         'Schnur + Rute ergibt fertige Angel');
+  await verb('Rede mit');
+  await tippe(560, 250);
+  pruefe((await status()).includes('Würmer'), 'Besitzer schickt dich zum Ufer (Würmer)');
 
   pruefe(jsFehler.length === 0, 'Keine Fehler beim Laden' + (jsFehler.length ? ': ' + jsFehler.join('; ') : ''));
 
