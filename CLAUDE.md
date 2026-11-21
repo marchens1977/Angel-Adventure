@@ -24,6 +24,7 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
   - `shop.jpg` – Hintergrund des Ladens (800 × 450)
   - `owner.png` – Ladenbesitzer
   - `player_1.png` … `player_6.png` – Laufanimation der Spielfigur (Bild 1 ist auch das Standbild)
+- `DREHBUCH.md` – Geschichte, Figuren, alle 7 Szenen mit Rätseln und das Intro-Drehbuch (Entwurf)
 - `werkzeuge/` – Hilfsprogramme (siehe Abschnitt 8)
 - `test/` – automatische Prüfungen (siehe Abschnitt 8)
 - **Installierbare App (Web-App/PWA):**
@@ -56,8 +57,13 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
 | 2026-11-18 | Regel „Hilfsprogramme und Tests gehören ins Projekt“ ergänzt; Vorschaubild-Werkzeug gesichert | – |
 | 2026-11-21 | Als installierbare Web-App „Megabarsch“ (Manifest, Symbole aus dem Startbild, Offline-Helfer); Prüfung erweitert | – |
 | 2026-11-21 | Startbildschirm mit neuem Bild (ElevenLabs) und Knopf „Spiel starten“; erste automatische Prüfung `test/test.js` | – |
+| 2026-11-21 | Drehbuch `DREHBUCH.md` (Geschichte, 7 Szenen, 15 Rätsel) und Intro-Plan (Abschnitt 9) festgehalten | – |
 
 ## 4. Offene Ideen / nächste Schritte
+
+- **Nächster Schritt:** Drehbuch (`DREHBUCH.md`) mit dem Nutzer abstimmen, dann Kapitel 1 bauen
+  (Aktionen „Schau an“, „Benutze“, „Gib“; Rätsel 1–3 im Laden)
+- Intro erst ganz am Ende bauen – Plan in Abschnitt 9
 
 - Neuer Raum „See“ (Ausgang aus dem Laden) – das Startbild `start.jpg` könnte dafür als Vorlage dienen
 - Startbild liegt nur in 1024 × 576 vor; bei Bedarf in voller Größe (1280 × 720) aus ElevenLabs nachladen
@@ -118,3 +124,24 @@ Nach jeder größeren Änderung dieses Tagebuch aktualisieren (Verlauf, Entschei
       Erscheint das Symbol mit dem Steg-Bild und darunter „Megabarsch“?
 - [ ] App über das Symbol öffnen: Startet sie ohne Browser-Leiste?
 - [ ] Offline: Flugmodus an, App öffnen – läuft das Spiel trotzdem?
+
+## 9. Plan fürs Intro (Anfangssequenz) – so wollen wir es machen
+
+Vom Nutzer am 2026-11-21 so gewünscht. **Wenn wir zum Intro kommen: diesen Abschnitt dem Nutzer
+noch einmal kurz zusammenfassen**, bevor etwas erzeugt wird.
+
+- **Kein echtes KI-Video für die ganze Minute.** Gründe: teuer (KI-Videos nur 5–10 Sekunden pro Auftrag,
+  also 6–12 Clips plus Fehlversuche), Pixel-Stil wird verschmiert, Figuren sehen je Clip anders aus,
+  große Datei (schlecht fürs Handy und den Offline-Speicher), schwer zu ändern.
+- **Stattdessen eine „animierte Bildergeschichte“ im Spiel selbst** (wie bei den klassischen Adventures):
+  - 5–8 Standbilder im Stil von `start.jpg`, erzeugt mit **ElevenLabs** (`shop.jpg` als Stil-Vorlage),
+    ca. 433 Credits pro Bild → bei 6 Bildern ca. 2.500 Credits. Kosten vorher ansagen.
+  - Claude programmiert die Bewegung: langsames Zoomen/Schwenken, Text Buchstabe für Buchstabe,
+    Überblendungen, Knopf **„Überspringen“**.
+  - Optional: Erzählstimme (ElevenLabs, immer nur **eine** Variante) und Musik.
+  - Optional: 1–2 kurze echte Video-Clips (Bild-zu-Video) nur für den Höhepunkt, z. B. Megabarsch springt aus dem Wasser.
+- **Zeitpunkt:** erst wenn Geschichte und die ersten Szenen stehen (sie geben den Stil vor).
+  Die Intro-Bilder sind eigene Bilder, kein Zusammenschnitt aus Spielszenen.
+- **Ablauf:** 1. Intro-Drehbuch (steht in `DREHBUCH.md`, Abschnitt 5) prüfen → 2. Bilder erzeugen
+  (Kosten vorher ansagen) → 3. Intro einbauen, Vorschaubild zeigen → 4. optional Stimme, Musik, Clip.
+- **Werkzeug:** ElevenLabs (schon verbunden: Bilder, Stimme, Video an einem Ort). Kein weiteres Abo nötig.
