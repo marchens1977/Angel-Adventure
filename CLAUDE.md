@@ -19,10 +19,15 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
   - Gezeichnet wird auf einer Zeichenfläche (Canvas) mit 800 × 450 Pixeln. Am Handy wird sie verkleinert.
   - Aktionen (Verben): „Gehe zu“, „Nimm“, „Rede mit“.
 - `assets/` – Grafiken:
+  - `start.jpg` – Bild für den Startbildschirm (Flussufer mit Steg und Laden, 1024 × 576).
+    Erstellt mit ElevenLabs (Modell gpt-image-2.5-sunburst, `shop.jpg` als Stil-Vorlage), Kosten ca. 433 Credits
   - `shop.jpg` – Hintergrund des Ladens (800 × 450)
   - `owner.png` – Ladenbesitzer
   - `player_1.png` … `player_6.png` – Laufanimation der Spielfigur (Bild 1 ist auch das Standbild)
 - `werkzeuge/` – Hilfsprogramme (siehe Abschnitt 8)
+- `test/` – automatische Prüfungen (siehe Abschnitt 8)
+- **Startbildschirm:** Beim Öffnen liegt ein Startbildschirm (Bild + Titel „MEGABARSCH“ + Knopf „Spiel starten“)
+  über dem Spiel. Erst nach dem Tippen auf den Knopf erscheinen Laden und Aktions-Leiste (Funktion `beginGame()`).
 
 ## 2. Wichtige Regeln und Entscheidungen
 
@@ -41,10 +46,12 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
 | 2026-11-15 | Spielfigur passend zu Raum und Besitzer vergrößert, etwas weiter vorne platziert, schnelleres Laufen | #1 |
 | 2026-11-16 | Dieses Projekt-Tagebuch angelegt | – |
 | 2026-11-18 | Regel „Hilfsprogramme und Tests gehören ins Projekt“ ergänzt; Vorschaubild-Werkzeug gesichert | – |
+| 2026-11-21 | Startbildschirm mit neuem Bild (ElevenLabs) und Knopf „Spiel starten“; erste automatische Prüfung `test/test.js` | – |
 
 ## 4. Offene Ideen / nächste Schritte
 
-- Neuer Raum „See“ (Ausgang aus dem Laden)
+- Neuer Raum „See“ (Ausgang aus dem Laden) – das Startbild `start.jpg` könnte dafür als Vorlage dienen
+- Startbild liegt nur in 1024 × 576 vor; bei Bedarf in voller Größe (1280 × 720) aus ElevenLabs nachladen
 - Angel-Minispiel, um den Megabarsch zu fangen
 - Weitere Gegenstände (Köder, Kescher, Würmer)
 - Aktion „Schau an“ mit Beschreibungen
@@ -86,9 +93,13 @@ Nach jeder größeren Änderung dieses Tagebuch aktualisieren (Verlauf, Entschei
 
 ### Automatische Prüfungen
 
-- Noch keine. Bei der nächsten Code-Änderung eine einfache anlegen (z. B. Spiel lädt ohne Fehler,
-  Gespräch mit dem Besitzer und Rute nehmen funktionieren).
+- `test/test.js` – Start im Projektordner: `node test/test.js`. Prüft in Handy-Größe: Startbildschirm und
+  Knopf sichtbar, Aktions-Leiste dort versteckt, Startbild lädt, Knopf startet das Spiel, Gespräch mit dem
+  Besitzer gibt die Aufgabe, Rute landet im Inventar, keine Fehler beim Laden. Nach jeder Änderung laufen lassen.
 
 ### Tests für den Nutzer (kann Claude nicht selbst prüfen)
 
-- Spiel auf dem echten Samsung-Handy (Chrome) öffnen: Passt die Größe, lässt sich alles gut antippen?
+- [ ] Spiel auf dem echten Samsung-Handy (Chrome) öffnen: Passt die Größe, lässt sich alles gut antippen?
+- [ ] Startbildschirm: Sind Bild, Titel „MEGABARSCH“ und Knopf gut zu sehen?
+- [ ] Knopf „Spiel starten“ antippen: Erscheint der Laden mit der Aktions-Leiste?
+- [ ] Gefällt dir das Startbild vom Stil her (passt es zum Laden)?

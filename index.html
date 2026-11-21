@@ -15,12 +15,31 @@
         .verb-btn.active { border-color: #ff0; background: #555; }
         #status-text { color: #0ff; font-weight: bold; font-size: 14px; min-height: 2.4em; }
         #inventory { color: #fff; font-size: 13px; }
+        /* Startbildschirm */
+        #screen { position: relative; }
+        #start-screen { position: absolute; inset: 0; background: url('assets/start.jpg') center / cover no-repeat;
+                        display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+                        padding: 6% 0 8%; box-sizing: border-box; }
+        #start-title { color: #ffcc00; font-size: clamp(26px, 8vw, 56px); font-weight: bold; letter-spacing: 3px;
+                       text-shadow: 3px 3px 0 #2b1b0c, -1px -1px 0 #2b1b0c; margin: 0; }
+        #start-btn { background: #5c3a21; color: #ffcc00; border: 3px solid #2b1b0c; box-shadow: 0 0 0 2px #ffcc00;
+                     font-family: monospace; font-weight: bold; font-size: clamp(16px, 4.5vw, 24px);
+                     padding: 10px 26px; cursor: pointer; }
+        #start-btn:hover, #start-btn:focus { background: #7a4e2d; }
+        body.title #ui-bar { display: none; }
     </style>
 </head>
-<body>
+<body class="title">
 
     <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="450"></canvas>
+        <div id="screen">
+            <canvas id="gameCanvas" width="800" height="450"></canvas>
+            <!-- Startbildschirm: liegt über dem Spiel, bis man auf "Spiel starten" tippt -->
+            <div id="start-screen">
+                <h1 id="start-title">MEGABARSCH</h1>
+                <button id="start-btn" onclick="beginGame()">Spiel starten</button>
+            </div>
+        </div>
         <div id="ui-bar">
             <div class="verbs">
                 <span>Aktion: <span id="current-verb">Gehe zu</span> |</span>
@@ -80,6 +99,12 @@
     function startGame() {
         updateInventory();
         gameLoop();
+    }
+
+    // Startbildschirm ausblenden und das eigentliche Spiel zeigen
+    function beginGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        document.body.classList.remove('title');
     }
 
     // ---------- Bedienung ----------
