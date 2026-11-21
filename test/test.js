@@ -1,9 +1,30 @@
 // Automatische Prüfung des Spiels.
 // Start (im Projektordner):  node test/test.js
 // Braucht Playwright mit Chromium (in Claude-Cloud-Sitzungen schon vorhanden).
-// Prüft: Startbildschirm, Start-Knopf, Gespräch mit dem Besitzer, Rute nehmen, keine Fehler.
+// Prüft: Startbildschirm, Start-Knopf, Gespräch mit dem Besitzer, Rute nehmen, keine Fehler,
+// und die installierbare App (Manifest, Symbole, Hintergrund-Helfer).
+// Das Spiel wird dafür über einen kleinen eigenen Webserver geöffnet (wie bei GitHub Pages).
 const path = require('path');
+const fs = require('fs');
+const http = require('http');
 const { chromium } = require('playwright');
+
+const ORDNER = path.resolve(__dirname, '..');
+const TYPEN = { '.html': 'text/html', '.js': 'text/javascript', '.jpg': 'image/jpeg', '.png': 'image/png',
+                '.webmanifest': 'application/manifest+json' };
+function starteServer() {
+  return new Promise(res => {
+    const server = http.createServer((req, antw) => {
+      let datei = decodeURIComponent(req.url.split('?')[0]);
+      if (datei.endsWith('/')) datei += 'index.html';
+      const voll = path.join(ORDNER, datei);
+      if (!voll.startsWith(ORDNER) || !fs.existsSync(voll)) { antw.writeHead(404); return antw.end(); }
+      antw.writeHead(200, { 'Content-Type': TYPEN[path.extname(voll)] || 'application/octet-stream' });
+      fs.createReadStream(voll).pipe(antw);
+    });
+    server.listen(0, () => res(server));
+  });
+}
 
 let fehler = 0;
 function pruefe(ok, text) {
@@ -12,15 +33,34 @@ function pruefe(ok, text) {
 }
 
 (async () => {
-  const html = path.resolve(__dirname, '..', 'index.html');
+  const server = await starteServer();
+  const adresse = 'http://localhost:' + server.address().port + '/';
   const browser = await chromium.launch();
   // Handy-Größe (ähnlich Samsung-Smartphone)
   const page = await browser.newPage({ viewport: { width: 412, height: 900 } });
   const jsFehler = [];
   page.on('pageerror', e => jsFehler.push(e.message));
   page.on('requestfailed', r => jsFehler.push('Datei fehlt: ' + r.url()));
-  await page.goto('file://' + html);
-  await page.waitForTimeout(800);
+  await page.goto(adresse);
+  await page.waitForTimeout(1500);
+
+  // 0. Installierbare App
+  const app = await page.evaluate(async () => {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (!link) return { fehlt: true };
+    const m = await (await fetch(link.href)).json();
+    const icons = await Promise.all(m.icons.map(i => new Promise(res => {
+      const img = new Image(); img.onload = () => res(img.naturalWidth + 'x' + img.naturalHeight === i.sizes);
+      img.onerror = () => res(false); img.src = i.src;
+    })));
+    const reg = await navigator.serviceWorker.getRegistration();
+    return { name: m.name, short: m.short_name, display: m.display, icons, sw: !!reg };
+  });
+  pruefe(!app.fehlt, 'App-Beschreibung (manifest.webmanifest) ist eingebunden');
+  pruefe(app.name === 'Megabarsch' && app.short === 'Megabarsch', 'App heißt "Megabarsch"');
+  pruefe(app.display === 'standalone', 'App öffnet ohne Browser-Leiste (standalone)');
+  pruefe(app.icons && app.icons.length >= 2 && app.icons.every(x => x), 'App-Symbole 192 und 512 laden mit richtiger Größe');
+  pruefe(app.sw, 'Hintergrund-Helfer (sw.js) ist angemeldet');
 
   // 1. Startbildschirm
   pruefe(await page.isVisible('#start-screen'), 'Startbildschirm ist sichtbar');
@@ -59,6 +99,7 @@ function pruefe(ok, text) {
   pruefe(jsFehler.length === 0, 'Keine Fehler beim Laden' + (jsFehler.length ? ': ' + jsFehler.join('; ') : ''));
 
   await browser.close();
+  server.close();
   console.log(fehler === 0 ? '\nAlle Prüfungen bestanden.' : '\n' + fehler + ' Prüfung(en) fehlgeschlagen.');
   process.exit(fehler === 0 ? 0 : 1);
 })();

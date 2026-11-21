@@ -26,6 +26,10 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
   - `player_1.png` … `player_6.png` – Laufanimation der Spielfigur (Bild 1 ist auch das Standbild)
 - `werkzeuge/` – Hilfsprogramme (siehe Abschnitt 8)
 - `test/` – automatische Prüfungen (siehe Abschnitt 8)
+- **Installierbare App (Web-App/PWA):**
+  - `manifest.webmanifest` – App-Beschreibung: Name „Megabarsch“, Symbole, Start ohne Browser-Leiste
+  - `icons/` – App-Symbole (`icon-192.png`, `icon-512.png`, `icon-180.png` für Apple), quadratischer Ausschnitt aus `start.jpg`
+  - `sw.js` – Hintergrund-Helfer: holt immer zuerst die neueste Version, ohne Internet die gespeicherte Kopie
 - **Startbildschirm:** Beim Öffnen liegt ein Startbildschirm (Bild + Titel „MEGABARSCH“ + Knopf „Spiel starten“)
   über dem Spiel. Erst nach dem Tippen auf den Knopf erscheinen Laden und Aktions-Leiste (Funktion `beginGame()`).
 
@@ -35,6 +39,10 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
 - Die Spielfigur wird 1,75-fach vergrößert (`PLAYER_SCALE`), damit sie zu Raum und Besitzer passt.
   Ihr Kopf soll etwa so groß sein wie der des Besitzers.
 - Der Laden heißt im Spiel „Fishing Shop“ (Schild oben rechts).
+- Die App wird als **Web-App (PWA)** angeboten, nicht als APK. Installation über Chrome („App installieren“ /
+  „Zum Startbildschirm hinzufügen“). Name unter dem Symbol: „Megabarsch“ (ein Wort).
+- **Neue Grafiken/Dateien** zusätzlich in die Liste `DATEIEN` in `sw.js` eintragen und die Versionsnummer
+  in `CACHE` (z. B. `megabarsch-v2`) erhöhen, damit sie auch offline verfügbar sind.
 - Änderungen werden nach Absprache **direkt in `main`** übernommen (oder per Pull Request, den Claude selbst
   anlegt und übernimmt), damit der Nutzer nichts selbst anklicken muss.
 
@@ -46,6 +54,7 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
 | 2026-11-15 | Spielfigur passend zu Raum und Besitzer vergrößert, etwas weiter vorne platziert, schnelleres Laufen | #1 |
 | 2026-11-16 | Dieses Projekt-Tagebuch angelegt | – |
 | 2026-11-18 | Regel „Hilfsprogramme und Tests gehören ins Projekt“ ergänzt; Vorschaubild-Werkzeug gesichert | – |
+| 2026-11-21 | Als installierbare Web-App „Megabarsch“ (Manifest, Symbole aus dem Startbild, Offline-Helfer); Prüfung erweitert | – |
 | 2026-11-21 | Startbildschirm mit neuem Bild (ElevenLabs) und Knopf „Spiel starten“; erste automatische Prüfung `test/test.js` | – |
 
 ## 4. Offene Ideen / nächste Schritte
@@ -93,7 +102,9 @@ Nach jeder größeren Änderung dieses Tagebuch aktualisieren (Verlauf, Entschei
 
 ### Automatische Prüfungen
 
-- `test/test.js` – Start im Projektordner: `node test/test.js`. Prüft in Handy-Größe: Startbildschirm und
+- `test/test.js` – Start im Projektordner: `node test/test.js`. Öffnet das Spiel über einen kleinen eigenen
+  Webserver (wie GitHub Pages). Prüft die installierbare App (Manifest eingebunden, Name „Megabarsch“,
+  Symbole laden in richtiger Größe, Hintergrund-Helfer angemeldet) und in Handy-Größe: Startbildschirm und
   Knopf sichtbar, Aktions-Leiste dort versteckt, Startbild lädt, Knopf startet das Spiel, Gespräch mit dem
   Besitzer gibt die Aufgabe, Rute landet im Inventar, keine Fehler beim Laden. Nach jeder Änderung laufen lassen.
 
@@ -103,3 +114,7 @@ Nach jeder größeren Änderung dieses Tagebuch aktualisieren (Verlauf, Entschei
 - [ ] Startbildschirm: Sind Bild, Titel „MEGABARSCH“ und Knopf gut zu sehen?
 - [ ] Knopf „Spiel starten“ antippen: Erscheint der Laden mit der Aktions-Leiste?
 - [ ] Gefällt dir das Startbild vom Stil her (passt es zum Laden)?
+- [ ] App installieren: In Chrome Menü (⋮) → „App installieren“ oder „Zum Startbildschirm hinzufügen“.
+      Erscheint das Symbol mit dem Steg-Bild und darunter „Megabarsch“?
+- [ ] App über das Symbol öffnen: Startet sie ohne Browser-Leiste?
+- [ ] Offline: Flugmodus an, App öffnen – läuft das Spiel trotzdem?
