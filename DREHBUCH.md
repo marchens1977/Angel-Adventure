@@ -42,9 +42,11 @@ und **„Gib“** – so wie in den alten Spielen.
 **Szene 1 – Der Angelladen „Fishing Shop“** (gibt es schon)
 - Herr Kiemer erzählt vom Baron und gibt den Auftrag: „Fang den Megabarsch – lebend!“
 - Rätsel 1: Rute aus dem Regal nehmen (gibt es schon). Aber sie hat **keine Schnur**.
-- Rätsel 2: Die Schnur liegt im Lager, der **Schlüssel** ist verschwunden. „Schau an“ Aquarium: Da glitzert etwas!
-  Finn nimmt den **Kescher** aus dem Ständer und **benutzt Kescher mit Aquarium** → Schlüssel.
-- Rätsel 3: Lager aufschließen → **Angelschnur** und eine **leere Würmerdose**.
+- Rätsel 2: Die Schnur liegt im Lager, der **Schlüssel** ist verschwunden. „Schau an“ Lampe: Da hängt ein
+  Schlüssel – viel zu hoch! Finn nimmt einen **Kescher** (langer Stiel) aus dem Regal hinter dem Tresen und
+  **benutzt Kescher mit Lampe** → Schlüssel.
+- Auf der **Pinnwand** hängt der Aushang des Barons („Der Silbersee wird am Sonntag verkauft“).
+- Rätsel 3: Lagertür (hinter dem Perlenvorhang) aufschließen → **Angelschnur** und eine **leere Würmerdose**.
   **Benutze Schnur mit Rute** → fertige Angel.
 
 **Szene 2 – Das Flussufer mit Steg** (Vorlage: Startbild `start.jpg`)
@@ -82,7 +84,7 @@ und **„Gib“** – so wie in den alten Spielen.
 - Rätsel 10: Ihre **Lampe oben im Leuchtturm** ist kaputt. Eine passende **Glühbirne** gibt es im Angelladen
   (Kiemer verkauft sie als „Nachtangel-Lampe“).
 - Rätsel 11: Zutaten für die Goldene Fliege: **Möwenfeder** (Möwe am Steg mit Brotkrümeln anlocken),
-  **Goldpapier** (vom Schokotaler aus der Kneipe), **Glitzerschuppe** (liegt im Aquarium im Laden).
+  **Goldpapier** (vom Schokotaler aus der Kneipe), **Glitzerschuppe** (liegt im Glas mit Gummiködern auf dem Ladentresen).
 - Rätsel 12: Alles Dr. Flosse geben → sie bindet die **Goldene Fliege** und schenkt Finn ihre **Spezial-Schnur**.
   **Ende Kapitel 2.**
 

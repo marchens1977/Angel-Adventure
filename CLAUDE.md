@@ -57,7 +57,7 @@ Megabarsch im See zu fangen. Dafür nimmt sich der Spieler eine Angelrute aus de
 | 2026-11-18 | Regel „Hilfsprogramme und Tests gehören ins Projekt“ ergänzt; Vorschaubild-Werkzeug gesichert | – |
 | 2026-11-21 | Als installierbare Web-App „Megabarsch“ (Manifest, Symbole aus dem Startbild, Offline-Helfer); Prüfung erweitert | – |
 | 2026-11-21 | Startbildschirm mit neuem Bild (ElevenLabs) und Knopf „Spiel starten“; erste automatische Prüfung `test/test.js` | – |
-| 2026-11-21 | Drehbuch `DREHBUCH.md` (Geschichte, 7 Szenen, 15 Rätsel) und Intro-Plan (Abschnitt 9) festgehalten | – |
+| 2026-11-21 | Drehbuch `DREHBUCH.md` (Geschichte, 7 Szenen, 15 Rätsel), Intro-Plan (Abschnitt 9) und Grafik-Plan (Abschnitt 10) festgehalten | – |
 
 ## 4. Offene Ideen / nächste Schritte
 
@@ -145,3 +145,19 @@ noch einmal kurz zusammenfassen**, bevor etwas erzeugt wird.
 - **Ablauf:** 1. Intro-Drehbuch (steht in `DREHBUCH.md`, Abschnitt 5) prüfen → 2. Bilder erzeugen
   (Kosten vorher ansagen) → 3. Intro einbauen, Vorschaubild zeigen → 4. optional Stimme, Musik, Clip.
 - **Werkzeug:** ElevenLabs (schon verbunden: Bilder, Stimme, Video an einem Ort). Kein weiteres Abo nötig.
+
+## 10. Plan für Grafiken (Szenen, Figuren, Gegenstände)
+
+Vom Nutzer am 2026-11-21 so abgesprochen:
+
+- **Hintergründe:** mit ElevenLabs, immer mit `shop.jpg` und `start.jpg` als Stil-Vorlage und demselben Stil-Satz
+  („Retro-Pixel-Art im Stil von 90er-Point-&-Click-Adventures, warme Farben, seitliche Ansicht, freier Boden
+  zum Laufen im unteren Drittel“). Danach auf 800 × 450 bringen. Steg-Szene = `start.jpg`.
+  Nacht-Versionen durch Umfärben statt neu erzeugen.
+- **Figuren:** ein Bild pro Figur (vor einfarbigem Hintergrund, `owner.png` als Stil-Vorlage), Claude schneidet
+  den Hintergrund weg und passt die Größe an (Köpfe so groß wie beim Besitzer). Laufanimation nur für Finn.
+- **Gegenstände:** mehrere Gegenstände auf **einem** Bild („Aufkleber-Bogen“) erzeugen und ausschneiden;
+  ganz Kleines (Glitzern, Schlüssel an der Lampe) zeichnet Claude per Code.
+- **Kosten:** ca. 433 Credits pro Bild; ganzes Spiel grob 5.000–5.700 Credits, Kapitel 1 ca. 2.200.
+- **Ablauf pro Bild:** Claude schreibt die Beschreibung und nennt die Kosten → Nutzer sagt „Ok“ → genau **eine**
+  Variante erzeugen und zeigen → Nutzer sagt „passt“ oder Änderungswunsch → zuschneiden, einbauen, testen, Vorschaubild.
